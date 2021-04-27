@@ -1,80 +1,36 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-    <home-swiper :banner="banners"/>
-    <recommend-view :recommend="recommends"/>
-    <feature-view/>
-    <tab-control class="tab-control" :titles="['流行', '新款', '精选']"/>
-    <ul>
-      <li>列表1</li>
-      <li>列表2</li>
-      <li>列表3</li>
-      <li>列表4</li>
-      <li>列表5</li>
-      <li>列表6</li>
-      <li>列表7</li>
-      <li>列表8</li>
-      <li>列表9</li>
-      <li>列表10</li>
-      <li>列表11</li>
-      <li>列表12</li>
-      <li>列表13</li>
-      <li>列表14</li>
-      <li>列表15</li>
-      <li>列表16</li>
-      <li>列表17</li>
-      <li>列表18</li>
-      <li>列表19</li>
-      <li>列表20</li>
-      <li>列表21</li>
-      <li>列表22</li>
-      <li>列表23</li>
-      <li>列表24</li>
-      <li>列表25</li>
-      <li>列表26</li>
-      <li>列表27</li>
-      <li>列表28</li>
-      <li>列表29</li>
-      <li>列表30</li>
-      <li>列表31</li>
-      <li>列表32</li>
-      <li>列表33</li>
-      <li>列表34</li>
-      <li>列表35</li>
-      <li>列表36</li>
-      <li>列表37</li>
-      <li>列表38</li>
-      <li>列表39</li>
-      <li>列表40</li>
-      <li>列表41</li>
-      <li>列表42</li>
-      <li>列表43</li>
-      <li>列表44</li>
-      <li>列表45</li>
-      <li>列表46</li>
-      <li>列表47</li>
-      <li>列表48</li>
-      <li>列表49</li>
-      <li>列表50</li>
-    </ul>
+    <scroll class="content">
+      <home-swiper :banner="banners"/>
+      <recommend-view :recommend="recommends"/>
+      <feature-view/>
+      <tab-control class="tab-control" :titles="['流行', '新款', '精选']" @tabControlClick="tabClick"/>
+      <!--<goods-list :goods="goods[currentType].list"/>-->
+      <goods-list :goods-list="showGoods"/>
+    </scroll>
   </div>
 </template>
 
 <script>
   import NavBar from "@/components/common/navbar/NavBar";
   import TabControl from "@/components/content/tabControl/TabControl";
+  import GoodsList from "@/components/content/goods/GoodsList";
+  import Scroll from "@/components/common/scroll/Scroll";
 
   import HomeSwiper from "./childComps/HomeSwiper";
   import RecommendView from "./childComps/RecommendView";
   import FeatureView from "./childComps/FeatureView";
 
-  import {getHomeMultidata} from '@/network/home'
+  import {getHomeMultidata, getHomeGoods} from '@/network/home'
 
   export default {
     name: "Home",
     components: {
       NavBar,
       TabControl,
+      GoodsList,
+      Scroll,
       HomeSwiper,
       RecommendView,
       FeatureView
@@ -83,16 +39,68 @@
       return {
         // result: null,
         banners: [],
-        recommends: []
+        recommends: [],
+        goods: {
+          'pop': {page: 0, list: []},
+          'new': {page: 0, list: []},
+          'sell': {page: 0, list: []}
+        },
+        currentType: 'pop'
+      }
+    },
+    computed: {
+      showGoods() {
+        return this.goods[this.currentType].list
       }
     },
     created() {
-      getHomeMultidata().then(res => {
-        // console.log(res);
-        // this.result = res
-        this.banners = res.data.banner.list;
-        this.recommends = res.data.recommend.list;
-      })
+      // 1.请求多个数据
+      this.getHomeMultidata(),
+      // 2.请求goods数据
+      // 2.1 creat()里面最好只写主要逻辑，将请求goods数据getHomeGoods()进行一次封装提取到下面methods里面
+      this.getHomeGoods('pop')
+      this.getHomeGoods('new')
+      this.getHomeGoods('sell')
+    },
+    methods: {
+      // 事件监听的相关方法
+      tabClick(index) {
+        // console.log(index);
+        switch (index) {
+          case 0:
+            this.currentType = 'pop'
+            break
+          case 1:
+            this.currentType = 'new'
+            break
+          case 2:
+            this.currentType = 'sell'
+            break
+        }
+      },
+      // 网络请求的相关方法
+      getHomeMultidata() {
+        getHomeMultidata().then(res => {
+          // console.log(res);
+          // this.result = res
+          this.banners = res.data.banner.list;
+          this.recommends = res.data.recommend.list;
+        })
+      },
+      getHomeGoods(type) {
+        const page = this.goods[type].page + 1
+        // 2.2 type通过参数传入，page通过传入的type来定义
+        getHomeGoods(type, page).then(res => {
+          // console.log(res);
+          // 2.3 a.push(...b[])：是将b数组遍历后添加到a数组，相当于下面的for循环
+          /*for(let n of res.data.list) {
+            this.goods[type].list.push(n)
+          }*/
+          this.goods[type].list.push(...res.data.list)
+          // 2.4 push()完数据后页码相应+1
+          this.goods[type].page += 1
+        })
+      }
     }
   }
 </script>
@@ -100,6 +108,13 @@
 <style scoped>
   #home {
     padding-top: 44px;
+    /*
+    height:100vh == height:100%
+    但是当元素没有内容时候，设置height:100%，该元素不会被撑开，此时高度为0，
+    但是设置height:100vh，该元素会被撑开屏幕高度一致。
+    */
+    height: 100vh;
+    /*position: relative;*/
   }
   .home-nav {
     /*base.css设置的变量*/
@@ -115,7 +130,21 @@
     z-index: 9;
   }
   .tab-control {
+    /*position: sticky移动端可以使用，适配IE时严禁使用*/
     position: sticky;
     top: 44px;
+    /*不设置的话，goods上划会覆盖此组件*/
+    z-index: 9;
+  }
+  /*.content {*/
+  /*  overflow: hidden;*/
+  /*  position: absolute;*/
+  /*  top: 44px;*/
+  /*  bottom: 49px;*/
+  /*  left: 0;*/
+  /*  right: 0;*/
+  /*}*/
+  .content {
+    height: calc(100vh - 93px);
   }
 </style>
