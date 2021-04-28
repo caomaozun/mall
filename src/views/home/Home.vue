@@ -1,7 +1,10 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-    <scroll class="content">
+    <scroll class="content"
+            ref="scroll"
+            :probe-type="3"
+            @homeScroll="homeScroll">
       <home-swiper :banner="banners"/>
       <recommend-view :recommend="recommends"/>
       <feature-view/>
@@ -9,6 +12,7 @@
       <!--<goods-list :goods="goods[currentType].list"/>-->
       <goods-list :goods-list="showGoods"/>
     </scroll>
+    <back-top @click.native="backTopClick" v-show="isShow"/>
   </div>
 </template>
 
@@ -17,6 +21,7 @@
   import TabControl from "@/components/content/tabControl/TabControl";
   import GoodsList from "@/components/content/goods/GoodsList";
   import Scroll from "@/components/common/scroll/Scroll";
+  import BackTop from "@/components/content/backTop/BackTop";
 
   import HomeSwiper from "./childComps/HomeSwiper";
   import RecommendView from "./childComps/RecommendView";
@@ -31,6 +36,7 @@
       TabControl,
       GoodsList,
       Scroll,
+      BackTop,
       HomeSwiper,
       RecommendView,
       FeatureView
@@ -45,7 +51,8 @@
           'new': {page: 0, list: []},
           'sell': {page: 0, list: []}
         },
-        currentType: 'pop'
+        currentType: 'pop',
+        isShow: false
       }
     },
     computed: {
@@ -61,9 +68,30 @@
       this.getHomeGoods('pop')
       this.getHomeGoods('new')
       this.getHomeGoods('sell')
+      /*// 监听GoodsListItem中发射的事件
+      this.$bus.$on('itemImgLoad', () => {
+        this.$refs.scroll.refresh()
+      })*/
+    },
+    mounted() {
+      // 监听GoodsListItem中发射的事件
+      const refresh = this.debounce(this.$refs.scroll.refresh, 500)
+      this.$bus.$on('itemImgLoad', () => {
+        // this.$refs.scroll.refresh()
+        refresh()
+      })
     },
     methods: {
       // 事件监听的相关方法
+      debounce(func, delay) {
+        let timer = null
+        return function (...args) {
+          if (timer) clearTimeout(timer)
+          timer = setTimeout(() => {
+            func.apply(this, args)
+          }, delay)
+        }
+      },
       tabClick(index) {
         // console.log(index);
         switch (index) {
@@ -77,6 +105,13 @@
             this.currentType = 'sell'
             break
         }
+      },
+      backTopClick() {
+        this.$refs.scroll.scrollToTop(0, 0, 500)
+      },
+      homeScroll(position) {
+        // console.log(position);
+        this.isShow = (-position.y) > 1000
       },
       // 网络请求的相关方法
       getHomeMultidata() {
@@ -114,7 +149,7 @@
     但是设置height:100vh，该元素会被撑开屏幕高度一致。
     */
     height: 100vh;
-    /*position: relative;*/
+    position: relative;
   }
   .home-nav {
     /*base.css设置的变量*/
@@ -136,15 +171,15 @@
     /*不设置的话，goods上划会覆盖此组件*/
     z-index: 9;
   }
-  /*.content {*/
-  /*  overflow: hidden;*/
-  /*  position: absolute;*/
-  /*  top: 44px;*/
-  /*  bottom: 49px;*/
-  /*  left: 0;*/
-  /*  right: 0;*/
-  /*}*/
   .content {
-    height: calc(100vh - 93px);
+    overflow: hidden;
+    position: absolute;
+    top: 44px;
+    bottom: 49px;
+    left: 0;
+    right: 0;
   }
+  /*.content {*/
+  /*  height: calc(100vh - 93px);*/
+  /*}*/
 </style>

@@ -62,7 +62,7 @@
     mounted() {
       const bs = new BScroll('.content', {
         probeType: 0,
-        click: true,  // click在最新版本中不用设置true了
+        click: true,  // click: true是为了保证div可以被监听点击，button不受影响
         pullUpLoad: true
       })
       bs.on('scroll', position => {
