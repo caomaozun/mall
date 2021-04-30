@@ -15,6 +15,10 @@
       probeType: {
         type: Number,
         default: 0
+      },
+      pullUpLoad: {
+        type:Boolean,
+        default: false
       }
     },
     data() {
@@ -29,10 +33,18 @@
         pullUpLoad: this.pullUpLoad
       })
       // 监听滚动
-      this.scroll.on('scroll', position => {
-        // console.log(position);
-        this.$emit('homeScroll', position)
-      })
+      if (this.probeType === 2 || this.probeType === 3) {
+        this.scroll.on('scroll', position => {
+          // console.log(position);
+          this.$emit('homeScroll', position)
+        })
+      }
+      // 监听滚动到底部
+      if (this.pullUpLoad) {
+        this.scroll.on('pullingUp', () => {
+          this.$emit('pullingUp')
+        })
+      }
     },
     methods: {
       scrollToTop(x, y, time=300) {
@@ -41,6 +53,12 @@
       refresh() {
         // console.log('-----')
         this.scroll && this.scroll.refresh()
+      },
+      finishPullUp() {
+        this.scroll && this.scroll.finishPullUp()
+      },
+      getScrollY() {
+        return this.scroll ? this.scroll.y : 0
       }
     }
   }

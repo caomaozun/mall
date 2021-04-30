@@ -1,14 +1,24 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
+    <tab-control :titles="['流行', '新款', '精选']"
+                 @tabControlClick="tabClick"
+                 ref="tabControl1"
+                 class="tab-control"
+                 v-show="isTabFixed"/>
     <scroll class="content"
             ref="scroll"
             :probe-type="3"
-            @homeScroll="homeScroll">
-      <home-swiper :banner="banners"/>
+            @homeScroll="homeScroll"
+            :pull-up-load=true
+            @pullingUp="loadMore">
+      <home-swiper :banner="banners" @swiperImgLoad="swiperImgLoad"/>
       <recommend-view :recommend="recommends"/>
       <feature-view/>
-      <tab-control class="tab-control" :titles="['流行', '新款', '精选']" @tabControlClick="tabClick"/>
+      <tab-control :titles="['流行', '新款', '精选']"
+                   @tabControlClick="tabClick"
+                   ref="tabControl2"
+                   :class="{fixed: isTabFixed}"/>
       <!--<goods-list :goods="goods[currentType].list"/>-->
       <goods-list :goods-list="showGoods"/>
     </scroll>
@@ -28,6 +38,7 @@
   import FeatureView from "./childComps/FeatureView";
 
   import {getHomeMultidata, getHomeGoods} from '@/network/home'
+  import {debounce} from '@/common/utils'
 
   export default {
     name: "Home",
@@ -52,13 +63,28 @@
           'sell': {page: 0, list: []}
         },
         currentType: 'pop',
-        isShow: false
+        isShow: false,
+        tabOffsetTop: 0,
+        isTabFixed: false,
+        saveY: 0
       }
     },
     computed: {
       showGoods() {
         return this.goods[this.currentType].list
       }
+    },
+    destroyed() {
+      // console.log('测试Home是否被销毁');
+    },
+    activated() {
+      // console.log('activated');
+      this.$refs.scroll.scroll.scrollTo(0, this.saveY, 0)
+      this.$refs.scroll.refresh()
+    },
+    deactivated() {
+      this.saveY = this.$refs.scroll.getScrollY()
+      // console.log(this.$refs.scroll.scroll.y)
     },
     created() {
       // 1.请求多个数据
@@ -68,30 +94,24 @@
       this.getHomeGoods('pop')
       this.getHomeGoods('new')
       this.getHomeGoods('sell')
-      /*// 监听GoodsListItem中发射的事件
+      /*// 监听GoodsListItem中发射的事件，写在这里会出现找不到scroll的问题
       this.$bus.$on('itemImgLoad', () => {
         this.$refs.scroll.refresh()
       })*/
     },
     mounted() {
-      // 监听GoodsListItem中发射的事件
-      const refresh = this.debounce(this.$refs.scroll.refresh, 500)
+      // 监听GoodsListItem中发射的事件，为了不出现找不到scroll的问题必须写在mounted生命周期函数中。
+      const refresh = debounce(this.$refs.scroll.refresh, 500)
       this.$bus.$on('itemImgLoad', () => {
         // this.$refs.scroll.refresh()
         refresh()
       })
+      // 获取tabControl的offsetTop，所有组件中都有一个属性 $el 用于获取组件的元素
+      // 但是在mounted生命周期函数中会存在TabControl上面的图片未加载完成时算出来offsetTop，这样会计算错误
+      // console.log(this.$refs.tabControl.$el.offsetTop);
     },
     methods: {
       // 事件监听的相关方法
-      debounce(func, delay) {
-        let timer = null
-        return function (...args) {
-          if (timer) clearTimeout(timer)
-          timer = setTimeout(() => {
-            func.apply(this, args)
-          }, delay)
-        }
-      },
       tabClick(index) {
         // console.log(index);
         switch (index) {
@@ -105,13 +125,23 @@
             this.currentType = 'sell'
             break
         }
+        this.$refs.tabControl1.currentIndex = index
+        this.$refs.tabControl2.currentIndex = index
       },
       backTopClick() {
         this.$refs.scroll.scrollToTop(0, 0, 500)
       },
       homeScroll(position) {
-        // console.log(position);
+        // 判断tabTop是否显示
         this.isShow = (-position.y) > 1000
+        // 决定TabControl是否吸顶（动态样式是否为position: fixed）
+        this.isTabFixed = (-position.y) > this.tabOffsetTop
+      },
+      loadMore() {
+        this.getHomeGoods(this.currentType)
+      },
+      swiperImgLoad() {
+        this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop
       },
       // 网络请求的相关方法
       getHomeMultidata() {
@@ -134,6 +164,9 @@
           this.goods[type].list.push(...res.data.list)
           // 2.4 push()完数据后页码相应+1
           this.goods[type].page += 1
+
+          // 完成下拉加载更多，以便于继续下一次下拉
+          this.$refs.scroll.finishPullUp()
         })
       }
     }
@@ -142,7 +175,7 @@
 
 <style scoped>
   #home {
-    padding-top: 44px;
+    /*padding-top: 44px;*/
     /*
     height:100vh == height:100%
     但是当元素没有内容时候，设置height:100%，该元素不会被撑开，此时高度为0，
@@ -157,20 +190,24 @@
     /*文字颜色*/
     color: #fff;
     /*CSS2的BFC中position: fixed 元素的位置相对于浏览器窗口是固定位置,即使窗口是滚动的它也不会移动：*/
+    /*
+    浏览器原生滚动时为了不让导航随着滚动，需要设置fixed，现在使用better-scroll后就不需要了
     position: fixed;
     left: 0;
     right: 0;
     top: 0;
-    /*z-index 属性指定一个元素的堆叠顺序。拥有更高堆叠顺序的元素总是会处于堆叠顺序较低的元素的前面*/
-    z-index: 9;
+    !*z-index 属性指定一个元素的堆叠顺序。拥有更高堆叠顺序的元素总是会处于堆叠顺序较低的元素的前面*!
+    z-index: 9;*/
   }
-  .tab-control {
-    /*position: sticky移动端可以使用，适配IE时严禁使用*/
+  /*
+    这个样式在应用better-stroll后就不起作用了
+    .tab-control {
+    !*position: sticky移动端可以使用，适配IE时严禁使用*!
     position: sticky;
     top: 44px;
-    /*不设置的话，goods上划会覆盖此组件*/
+    !*不设置的话，goods上划会覆盖此组件*!
     z-index: 9;
-  }
+  }*/
   .content {
     overflow: hidden;
     position: absolute;
@@ -179,7 +216,19 @@
     left: 0;
     right: 0;
   }
-  /*.content {*/
-  /*  height: calc(100vh - 93px);*/
-  /*}*/
+  /*.content {
+    height: calc(100vh - 93px);
+  }*/
+  /*
+  动态绑定属性这个方法不行，这个就没用了
+  .fixed {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 44px;
+  }*/
+  .tab-control {
+    position: relative;
+    z-index: 9;
+  }
 </style>
