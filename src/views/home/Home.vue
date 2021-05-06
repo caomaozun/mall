@@ -39,6 +39,7 @@
 
   import {getHomeMultidata, getHomeGoods} from '@/network/home'
   import {debounce} from '@/common/utils'
+  import {itemListenerMixin} from "@/common/mixin";
 
   export default {
     name: "Home",
@@ -66,7 +67,8 @@
         isShow: false,
         tabOffsetTop: 0,
         isTabFixed: false,
-        saveY: 0
+        saveY: 0,
+        // itemImgListener: null
       }
     },
     computed: {
@@ -74,6 +76,7 @@
         return this.goods[this.currentType].list
       }
     },
+    mixins: [itemListenerMixin],
     destroyed() {
       // console.log('测试Home是否被销毁');
     },
@@ -83,8 +86,12 @@
       this.$refs.scroll.refresh()
     },
     deactivated() {
+      // 离开组件时保存Y值
       this.saveY = this.$refs.scroll.getScrollY()
-      // console.log(this.$refs.scroll.scroll.y)
+      // 离开组件时取消全局事件的监听，这样会取消所有组件对此事件的监听
+      // this.$bus.$off('itemImgLoad')
+      // 离开组件时取消本组件对全局事件的监听
+      this.$bus.$off('itemImgLoad', this.itemImgListener)
     },
     created() {
       // 1.请求多个数据
@@ -101,11 +108,11 @@
     },
     mounted() {
       // 监听GoodsListItem中发射的事件，为了不出现找不到scroll的问题必须写在mounted生命周期函数中。
-      const refresh = debounce(this.$refs.scroll.refresh, 500)
-      this.$bus.$on('itemImgLoad', () => {
-        // this.$refs.scroll.refresh()
-        refresh()
-      })
+      /*const newRefresh = debounce(this.$refs.scroll.refresh, 500)
+      this.itemImgListener = () => {
+        newRefresh()
+      }
+      this.$bus.$on('itemImgLoad', this.itemImgListener)*/
       // 获取tabControl的offsetTop，所有组件中都有一个属性 $el 用于获取组件的元素
       // 但是在mounted生命周期函数中会存在TabControl上面的图片未加载完成时算出来offsetTop，这样会计算错误
       // console.log(this.$refs.tabControl.$el.offsetTop);

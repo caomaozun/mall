@@ -1,6 +1,7 @@
 <template>
   <div class="goods-list-item" @click="itemClick">
-    <img :src="goodsListItem.show.img" alt="" @load="imgLoad">
+<!--    <img :src="goodsListItem.show.img" alt="" @load="imgLoad">-->
+    <img :src="showImage" alt="" @load="imgLoad">
     <div class="goods-list-item-info">
       <p>{{goodsListItem.title}}</p>
       <span class="price">{{goodsListItem.price}}</span>
@@ -20,9 +21,21 @@
         }
       }
     },
+    computed: {
+      showImage() {
+        return this.goodsListItem.image || this.goodsListItem.show.img
+        // 注意：当数值参与逻辑或（ || ）运算时，结果为true会返回第一个为真的值，结果为false会返回第二个为假的值
+        // return this.goodsListItem.show.img || this.goodsListItem.image
+      }
+    },
     methods: {
       imgLoad() {
         this.$bus.$emit('itemImgLoad')
+        /*if(this.$route.path.indexOf('/home')) {
+          this.$bus.$emit('homeItemImgLoad')
+        } else if(this.$route.path.indexOf('/detail')) {
+          this.$bus.$emit('detailItemImgLoad')
+        }*/
       },
       itemClick() {
         this.$router.push('/detail/' + this.goodsListItem.iid)
