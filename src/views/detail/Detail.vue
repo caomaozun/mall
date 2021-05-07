@@ -1,14 +1,17 @@
 <template>
   <div id="detail">
-    <detail-nav-bar class="detail-nav"/>
-    <scroll class="content" ref="scroll">
+    <detail-nav-bar class="detail-nav" @titleClick="titleClick" ref="detailNav"/>
+    <scroll class="content"
+            ref="scroll"
+            @scroll="contentScroll"
+            :probe-type="3">
       <detail-swiper :top-images="topImages"/>
       <detail-base-info :goods="goods"/>
       <detail-shop-info :shop="shop"/>
       <detail-goods-info :detail-info="detailInfo" @imageLoad="imageLoad"/>
-      <detail-param-info :param-info="paramInfo"/>
-      <detail-comment-info :comment-info="commentInfo"/>
-      <goods-list :goods-list="recommends"/>
+      <detail-param-info :param-info="paramInfo" ref="param"/>
+      <detail-comment-info :comment-info="commentInfo" ref="comment"/>
+      <goods-list :goods-list="recommends" ref="recommend"/>
     </scroll>
   </div>
 </template>
@@ -25,7 +28,7 @@
   import GoodsList from "@/components/content/goods/GoodsList";
 
   import {getDetail, Goods, Shop, GoodsParam, getRecommends} from "@/network/detail";
-  import {debounce} from "@/common/utils";
+  // import {debounce} from "@/common/utils";
   import {itemListenerMixin} from "@/common/mixin";
 
   export default {
@@ -52,6 +55,8 @@
         commentInfo: {},
         recommends: [],
         // itemImgListener: null
+        themeTopYs: [],
+        currentIndex: 0
       }
     },
     mixins: [itemListenerMixin],
@@ -95,6 +100,55 @@
     methods: {
       imageLoad() {
         this.$refs.scroll.refresh()
+        // 将offsetTop添加到定义的数组themeTopYs中
+        this.themeTopYs.push(0)
+        this.themeTopYs.push(this.$refs.param.$el.offsetTop)
+        this.themeTopYs.push(this.$refs.comment.$el.offsetTop)
+        this.themeTopYs.push(this.$refs.recommend.$el.offsetTop)
+        // console.log(this.themeTopYs);
+      },
+      titleClick(index) {
+        // console.log(index);
+        // this.$refs.scroll.scroll.scrollTo(0, -this.themeTopYs[index], 200)
+        this.$refs.scroll.scrollToTop(0, -this.themeTopYs[index], 200)
+      },
+      contentScroll(position) {
+        // console.log(position);
+        // 获取Y值
+        const positionY = -position.y
+        // positionY和标题的themeTopYs中的值对比
+        // 举例：themeTopYs:[0, 1000, 2000, 3000]则positionY在0-1000间index=0,1000-2000间index=1,2000-3000间index=2，大于3000时index=3
+        // 1.下面let i in this.themeTopYs不能用
+        /*for (let i in this.themeTopYs) {
+          if(positionY >= this.themeTopYs[parseInt(i)] && positionY < this.themeTopYs[parseInt(i+1)]) {
+            console.log(i);
+          }
+        }*/
+        // 2.下面i=0/1/2时没问题，i=3时this.themeTopYs[i+1]会越界导致出错
+        /*for (let i = 0; i < this.themeTopYs.length; i++) {
+          if (positionY >= this.themeTopYs[i] && positionY < this.themeTopYs[i+1]) {
+
+          }
+        }*/
+        // 3.这样不会越界但是还存在问题：positionY和this.themeTopYs[i]频繁比较
+        /*let length = this.themeTopYs.length
+        for (let i = 0; i < length; i++) {
+          if ((i < length - 1 && positionY >= this.themeTopYs[i] && positionY < this.themeTopYs[i+1])
+            || (i === length - 1 && positionY > this.themeTopYs[i])) {
+            console.log(i);
+          }
+        }*/
+        // 4.优化上面代码：先将i赋值给currentIndex，然后判断this.currentIndex !== i为false就终止代码，等i切换时才会判断一次。以此优化代码不会频繁比较了
+        let length = this.themeTopYs.length
+        for (let i = 0; i < length; i++) {
+          if (this.currentIndex !== i && ((i < length - 1 && positionY >= this.themeTopYs[i] && positionY < this.themeTopYs[i+1])
+            || (i === length - 1 && positionY > this.themeTopYs[i]))) {
+            this.currentIndex = i
+            // console.log(this.currentIndex);
+            // 导航栏的currentIndex = this.currentIndex时滚动到相应位置对用标题会自动切换
+            this.$refs.detailNav.currentIndex = this.currentIndex
+          }
+        }
       }
     }
   }

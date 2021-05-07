@@ -36,7 +36,7 @@
       if (this.probeType === 2 || this.probeType === 3) {
         this.scroll.on('scroll', position => {
           // console.log(position);
-          this.$emit('homeScroll', position)
+          this.$emit('scroll', position)
         })
       }
       // 监听滚动到底部

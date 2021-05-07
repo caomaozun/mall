@@ -9,7 +9,7 @@
     <scroll class="content"
             ref="scroll"
             :probe-type="3"
-            @homeScroll="homeScroll"
+            @scroll="homeScroll"
             :pull-up-load=true
             @pullingUp="loadMore">
       <home-swiper :banner="banners" @swiperImgLoad="swiperImgLoad"/>
