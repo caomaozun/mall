@@ -15,7 +15,7 @@
     /*position: fixed生成绝对定位的元素，相对于浏览器窗口进行定位。*/
     position: fixed;
     right: 5px;
-    bottom: 49px;
+    bottom: 58px;
   }
   .back-top img {
     height: 50px;
