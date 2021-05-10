@@ -173,8 +173,10 @@
         product.desc = this.goods.desc
         product.price = this.goods.realPrice
         product.iid = this.iid
-        console.log(product);
         // 2.将商品加入到购物车里面
+        // this.$store.state.cartList.push(product) 不可以直接在组件中修改state中的内容，因为stata的改变必须经过mutations
+        // this.$store.commit('addCart', product)
+        this.$store.dispatch('addCart', product)
       }
     }
   }
