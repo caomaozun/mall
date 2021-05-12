@@ -34,6 +34,8 @@
   // import {debounce} from "@/common/utils";
   import {itemListenerMixin, backTopMixin} from "@/common/mixin";
 
+  import {mapActions} from 'vuex'
+
   export default {
     name: "Detail",
     components: {
@@ -102,6 +104,10 @@
       this.$bus.$off('itemImgLoad', this.itemImgListener)
     },
     methods: {
+      ...mapActions(['addCart']),
+      /*...mapActions({
+        add: 'addCart'
+      }),*/
       imageLoad() {
         this.$refs.scroll.refresh()
         // 将offsetTop添加到定义的数组themeTopYs中
@@ -176,7 +182,17 @@
         // 2.将商品加入到购物车里面
         // this.$store.state.cartList.push(product) 不可以直接在组件中修改state中的内容，因为stata的改变必须经过mutations
         // this.$store.commit('addCart', product)
-        this.$store.dispatch('addCart', product)
+        // dispatch返回Promise然后.then()接收
+        /*this.$store.dispatch('addCart', product).then(res => {
+          console.log(res);
+        })*/
+        /*this.add(product).then(res => {
+          console.log(res);
+        })*/
+        this.addCart(product).then(res => {
+          // console.log(res);
+          this.$toast.show(res)
+        })
       }
     }
   }
