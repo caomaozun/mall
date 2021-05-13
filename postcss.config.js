@@ -8,7 +8,12 @@ module.exports = {
 		  viewportUnit: 'vw', // 指定需要转换成的视窗单位，建议使用vw
 		  selectorBlackList: ['ignore', 'tab-bar', 'tab-bar-item'], // 指定不需要转换的类,后面再讲.
 		  minPixelValue: 1, // 小于或等于`1px`不转换为视窗单位.
-		  mediaQuery: false // 允许在媒体查询中转换`px`
+		  mediaQuery: false, // 允许在媒体查询中转换`px`
+      exclude: [/TabBar/] // 必须是正则表达式
 	  },
   }
 }
+
+// 1.js中使用正则：/正则规则/
+// 2.exclude中存放的必须是正则表达式
+// 3.按照排除的文件写对应的正则：^abc是以abc开头，abc$是以abc结尾
